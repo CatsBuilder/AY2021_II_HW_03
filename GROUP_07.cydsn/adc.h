@@ -10,4 +10,9 @@
  * ========================================
 */
 
+#define NUMBER_OF_SAMPLES 5
+
+void sensors_sampling(void);
+void average_samples(void);
+void buffer_placement(void);
 /* [] END OF FILE */

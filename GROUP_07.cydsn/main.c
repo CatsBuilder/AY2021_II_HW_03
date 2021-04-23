@@ -10,32 +10,39 @@
  * ========================================
 */
 #include "project.h"
-#include "timer.h"
-#include "adc.h"
 #include "i2c.h"
-#define I2C_BUFFER_SIZE 7 //il buffer ha 7 bytes di memoria dedicata
+#include "InterruptRoutines.h"
+#include "cyapicallbacks.h"
 
-volatile uint8_t tick; //counter del timer
-volatile uint32_t tmp_samples[NUMBER_OF_SAMPLES]; //buffer delle letture
-volatile uint32_t ldr_samples[NUMBER_OF_SAMPLES];
-volatile uint32_t accumulator_tmp; //accumulatori delle letture per fare la media 
-volatile uint32_t accumulator_ldr;
-volatile uint16_t tmp;  //valori da trasmettere
-volatile uint16_t ldr;
-volatile uint8_t buffer_slave[I2C_BUFFER_SIZE];  //buffer di memoria dello slave
+// values to transmit
+volatile uint16_t tmp=0; 
+volatile uint16_t ldr=0;
+
+// i2c slave memory buffer
+volatile uint8_t buffer_slave[I2C_BUFFER_SIZE];
+
 int main(void)
 {
-    tick=0;
-    CyGlobalIntEnable; /* Enable global interrupts. */
-    AMux_Start(); //inizializziamo il mux
-    EZI2C_Start(); //inizializziamo lo slave
-    set_slave(buffer_slave);//richiamo alla funzione per settare il buffer come scritto nel readme
-    EZI2C_SetBuffer1(I2C_BUFFER_SIZE, I2C_BUFFER_SIZE-5, buffer_slave); //diciamo allo slave qual è il suo buffer di memoria
-
+    
+    CyGlobalIntEnable;                                                  // Enable global interrupts
+    
+    AMux_Start();                                                       // initialize the components
+    EZI2C_Start(); 
+    Timer_Start();
+    ADC_DelSig_Start();
+    
+    ADC_DelSig_StartConvert();                                          // start the conversion
+   
+    // initialize the slave
+    set_slave(buffer_slave);                                            // set the buffer as indicated in the readme 
+    EZI2C_SetBuffer1(I2C_BUFFER_SIZE, I2C_BUFFER_SIZE-5, buffer_slave); // set the slave's memory buffer 
+    
+    timer_isr_StartEx(CustomTimerISR);                                  // start the ISR
+    
 
     for(;;)
     {
-        /* Place your application code here. */
+
     }
 }
 

@@ -16,32 +16,61 @@
 #define MUX_TMP 0
 #define I2C_BUFFER_SIZE 7 
 
-extern uint32_t tmp_samples[NUMBER_OF_SAMPLES];
-extern uint32_t ldr_samples[NUMBER_OF_SAMPLES];
-extern uint32_t accumulator_tmp;
-extern uint32_t accumulator_ldr;
+
+// averaged values
 extern uint16_t tmp;
 extern uint16_t ldr;
-extern uint8_t tick;
-static uint8_t i;
+
+// slave buffer
 extern uint8_t buffer_slave[I2C_BUFFER_SIZE];
-void sensors_sampling(void){
-    AMux_FastSelect(MUX_LDR); //attiva il canale del LDR nel mux
-    ldr_samples[tick]=ADC_DelSig_Read32(); //leggi con l'adc e mettilo nel buffer
-    AMux_FastSelect(MUX_TMP); //attiva il canale TMP del mux
-    tmp_samples[tick]=ADC_DelSig_Read32();
-}
 
-void average_samples(void){ //fail la media dei valori 
-    for (i=0; i<NUMBER_OF_SAMPLES; i++){
-        accumulator_tmp+=tmp_samples[i];
-        accumulator_ldr+=ldr_samples[i];
+static uint8_t i;
+
+//// SENSORS SAMPLING
+//void sensors_sampling(){
+//    // activate the LDR channel in the MUX
+//    AMux_FastSelect(MUX_LDR); 
+//    // read the LDR value with the ADC and write it in the buffer
+//    ldr_samples[tick]=ADC_DelSig_Read32();
+//    // activate the TMP channel in the MUX
+//    AMux_FastSelect(MUX_TMP); 
+//    // read the TMP value with the ADC and write it in the buffer
+//    tmp_samples[tick]=ADC_DelSig_Read32();
+//}
+//
+//// VALUES AVERAGE
+//void average_samples(){  
+//    for (i=0; i<NUMBER_OF_SAMPLES; i++){
+//        // add the new TMP value to the TMP accumulator
+//        accumulator_tmp+=tmp_samples[i];
+//        // add the new LDR value to the LDR accumulator
+//        accumulator_ldr+=ldr_samples[i];
+//    }
+//    // TMP average
+//    tmp=(uint16_t)(accumulator_tmp/NUMBER_OF_SAMPLES);
+//    // LDR average
+//    ldr=(uint16_t)(accumulator_ldr/NUMBER_OF_SAMPLES);
+//}
+//
+//// BUFFER PLACEMENT
+//void buffer_placement(){
+//    buffer_slave[5]=ldr>>8;
+//    buffer_slave[6]=ldr&0xFF;
+//    buffer_slave[3]=tmp>>8;
+//    buffer_slave[4]=tmp&0xFF;
+//}
+
+
+void avg_samples(){
+    for (i=0;i<NUMBER_OF_SAMPLES;i++)
+    {
+        AMux_FastSelect(MUX_LDR);
+        ldr=ldr+ADC_DelSig_Read32();
+        AMux_FastSelect(MUX_TMP);
+        tmp=tmp+ADC_DelSig_Read32();
     }
-    tmp=(uint16_t)(accumulator_tmp/NUMBER_OF_SAMPLES);
-    ldr=(uint16_t)(accumulator_ldr/NUMBER_OF_SAMPLES);
-}
-
-void buffer_placement(void){
+    ldr=ldr/NUMBER_OF_SAMPLES;
+    tmp=tmp/NUMBER_OF_SAMPLES;
     buffer_slave[5]=ldr>>8;
     buffer_slave[6]=ldr&0xFF;
     buffer_slave[3]=tmp>>8;

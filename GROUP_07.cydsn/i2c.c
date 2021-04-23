@@ -12,14 +12,34 @@
 #include "i2c.h"
 
 void set_slave(volatile uint8_t * buffer){
-    //qui settiamo i valori del readme per il buffer dello slave        
-    buffer[0]=0b00010100; //00 bits riservati 0101 5 samples da mediare 00 inizialmente lo status è "devide stopped"
-    buffer[1]=0b101; //time period
-    buffer[2]=0xBC; //valore del WHO AM I
-    buffer[3]=0;// bytes da riempire con i dati -start
+    
+    // set the slave buffer values
+    
+    // CONTROL REGISTER 1
+    // bytes 0-1: 00, device stopped
+    // bytes 2-5: 0101, number of samples to average (5)
+    // bytes 7-8: 00, reserved bits
+    buffer[0]=0b00010100;
+    
+    // CONTROL REGISTER 2 (timer period)
+    buffer[1]=0b101;
+    
+    //  WHO AM I value
+    buffer[2]=0xBC;
+    
+    // Buffer bytes reserved for data
+    buffer[3]=0;
     buffer[4]=0;
     buffer[5]=0;
     buffer[6]=0;
-    buffer[7]=0;// bytes da riempire con i dati -stop
+    buffer[7]=0;
+}
+
+uint16_t trim_values(volatile uint16_t value)
+{
+    if (value<0) value=0;                       // trim values lower than 0
+    if (value>=65535) value=65535;              // trim values greater than 2^16
+    value=ADC_DelSig_CountsTo_mVolts(value);    // convert value to millivolts
+    return value;
 }
 /* [] END OF FILE */

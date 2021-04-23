@@ -9,18 +9,21 @@
  *
  * ========================================
 */
-#ifndef __TIMER_H__
-    #define __TIMER_H__
+#ifndef __INTERRUPT_ROUTINES_H
+    #define __INTERRUPT_ROUTINES_H
     
     #include "cytypes.h"
     #include "project.h"
-    #include "timer_isr.h"
-    #include "ADC_DelSig.h"
-    #include "adc.h"
+    #define NUMBER_OF_SAMPLES 5
+    #define MUX_LDR 1
+    #define MUX_TMP 0
+    #define I2C_BUFFER_SIZE 7 
     
+
+    void set_slave(volatile uint8_t *buffer);
+    void avg_samples();
     
     CY_ISR_PROTO(CustomTimerISR);
-    
     
 #endif
 /* [] END OF FILE */

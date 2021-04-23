@@ -13,4 +13,5 @@
 #include "project.h"
 
 void set_slave(volatile uint8_t * buffer);
+uint16_t trim_values(volatile uint16_t value);
 /* [] END OF FILE */

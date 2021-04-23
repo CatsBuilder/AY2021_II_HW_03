@@ -17,6 +17,7 @@
 // values to transmit
 volatile uint16_t tmp=0; 
 volatile uint16_t ldr=0;
+volatile uint8_t number_of_samples;
 
 // i2c slave memory buffer
 volatile uint8_t buffer_slave[I2C_BUFFER_SIZE];

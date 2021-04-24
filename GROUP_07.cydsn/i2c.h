@@ -9,8 +9,17 @@
  *
  * ========================================
 */
-#include "EZI2C.h"
-#include "project.h"
+#ifndef __I2C_H__
+    #define __I2C_H__
+    #include "EZI2C.h"
+    #include "project.h"
+    #include "defines.h"
+    #define I2C_BUFFER_SIZE 7 //il buffer ha 7 bytes di memoria dedicata
+    
+    void set_slave(volatile uint8_t * buffer);
+    void set_parameters(void);
+#endif
 
-void set_slave(volatile uint8_t * buffer);
+
+
 /* [] END OF FILE */

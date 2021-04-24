@@ -14,7 +14,7 @@
     
     #include "cytypes.h"
     #include "project.h"
-    
+    #include "defines.h"
     CY_ISR_PROTO(CustomTimerISR);
     
     

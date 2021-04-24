@@ -9,34 +9,60 @@
  *
  * ========================================
 */
+
 #include "project.h"
-#include "timer.h"
-#include "adc.h"
+#include "defines.h"
+#include "timer_routine.h"
 #include "i2c.h"
-#define I2C_BUFFER_SIZE 7 //il buffer ha 7 bytes di memoria dedicata
+#include "adc.h"
 
-volatile uint8_t tick; //counter del timer
-volatile uint32_t tmp_samples[NUMBER_OF_SAMPLES]; //buffer delle letture
-volatile uint32_t ldr_samples[NUMBER_OF_SAMPLES];
-volatile uint32_t accumulator_tmp; //accumulatori delle letture per fare la media 
-volatile uint32_t accumulator_ldr;
-volatile uint16_t tmp;  //valori da trasmettere
-volatile uint16_t ldr;
+volatile uint32_t tmp_samples[MAX_NUMBER_OF_SAMPLES]; //buffer delle letture
+volatile uint32_t ldr_samples[MAX_NUMBER_OF_SAMPLES];
+volatile uint32_t accumulator_tmp=0; //accumulatori delle letture per fare la media 
+volatile uint32_t accumulator_ldr=0;
+volatile uint16_t tmp=0;  //valori da trasmettere
+volatile uint16_t ldr=0;
 volatile uint8_t buffer_slave[I2C_BUFFER_SIZE];  //buffer di memoria dello slave
-int main(void)
-{
-    tick=0;
+volatile uint8_t samples_num=0;
+volatile uint8_t tick=0; //counter del timer
+volatile uint8_t ControlRegister1=0;
+volatile uint8_t ControlRegister2=2;
+volatile uint8_t sample=0;
+volatile uint8_t done=0;
+volatile uint8_t data=0;
+    
+int main(void){
     CyGlobalIntEnable; /* Enable global interrupts. */
-    AMux_Start(); //inizializziamo il mux
     EZI2C_Start(); //inizializziamo lo slave
+    timer_Start();
+    ADC_DelSig_Start();
+    timer_isr_StartEx(CustomTimerISR);
     set_slave(buffer_slave);//richiamo alla funzione per settare il buffer come scritto nel readme
-    EZI2C_SetBuffer1(I2C_BUFFER_SIZE, I2C_BUFFER_SIZE-5, buffer_slave); //diciamo allo slave qual è il suo buffer di memoria
-
-
+    
+    AMux_Start(); //inizializziamo il mux
+    set_parameters();
+    CyGlobalIntEnable; /* Enable global interrupts. */
     for(;;)
     {
-        /* Place your application code here. */
+        if(buffer_slave[1]!=ControlRegister2 || buffer_slave[0]!=ControlRegister1){
+            set_parameters();
+            if (ControlRegister1&0b10 && ControlRegister1&0b01)
+                LED_Pin_Write(1);
+            else 
+                LED_Pin_Write(0);
+        }
+        else{
+            if(sample){
+                sensors_sampling();
+                sample=0;
+                data++;
+            }
+            if (done){
+                average_samples();
+                buffer_placement();
+                done=0;
+                data=0;
+            }
+        }
     }
 }
-
-/* [] END OF FILE */

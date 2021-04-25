@@ -14,16 +14,9 @@
     
     #include "cytypes.h"
     #include "project.h"
-    #define NUMBER_OF_SAMPLES 5
-    #define MUX_LDR 1
-    #define MUX_TMP 0
-    #define I2C_BUFFER_SIZE 7 
-    
-
-    void set_slave(volatile uint8_t *buffer);
-    void avg_samples();
     
     CY_ISR_PROTO(CustomTimerISR);
+    CY_ISR_PROTO(CustomTimerSampleISR);
     
 #endif
 /* [] END OF FILE */

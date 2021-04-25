@@ -1,0 +1,10 @@
+;================================
+;default operation settings (5 samples and 4ms of sampling frequency); remember to set the 20 ms scan period on BCP
+;w 08 00 17 04 p
+;================================
+
+;================================
+; strings to be used when we want to graph the sensors sampling 
+w 08 03 p
+r 08 @1temp @0temp @1ldr @0ldr p 
+;================================

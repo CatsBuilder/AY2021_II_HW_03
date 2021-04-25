@@ -1,12 +1,11 @@
 /* ========================================
  *
- * Copyright YOUR COMPANY, THE YEAR
- * All Rights Reserved
- * UNPUBLISHED, LICENSED SOFTWARE.
+ *   \i2c.h
  *
- * CONFIDENTIAL AND PROPRIETARY INFORMATION
- * WHICH IS THE PROPERTY OF your company.
+ *   header file for I2C slave setting 
  *
+ *   \Authors: Oswaldo Parra, Chiara Maninetti
+ *   \Date: 25/04/2021
  * ========================================
 */
 #ifndef __I2C_H__
@@ -14,10 +13,11 @@
     #include "EZI2C.h"
     #include "project.h"
     #include "defines.h"
-    #define I2C_BUFFER_SIZE 7 //il buffer ha 7 bytes di memoria dedicata
     
-    void set_slave(volatile uint8_t * buffer);
+    
+    void set_slave(uint8_t * buffer);
     void set_parameters(void);
+    void buffer_placement(void);
 #endif
 
 

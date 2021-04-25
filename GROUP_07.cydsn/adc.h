@@ -1,24 +1,23 @@
 /* ========================================
  *
- * Copyright YOUR COMPANY, THE YEAR
- * All Rights Reserved
- * UNPUBLISHED, LICENSED SOFTWARE.
+ *   \adc.h
  *
- * CONFIDENTIAL AND PROPRIETARY INFORMATION
- * WHICH IS THE PROPERTY OF your company.
+ *   header file for routines dealing with the sampling and average calculation
  *
+ *   \Authors: Oswaldo Parra, Chiara Maninetti
+ *   \Date: 25/04/2021
  * ========================================
 */
 #ifndef __ADC_H__
     #define __ADC_H__
-    
     #include "defines.h"
+    #include "project.h"
     
-     uint8_t i;
+    
  
     void sensors_sampling(void);
     void average_samples(void);
-    void buffer_placement(void);
+
 #endif
 
 

@@ -1,33 +1,31 @@
 /* ========================================
  *
- * Copyright YOUR COMPANY, THE YEAR
- * All Rights Reserved
- * UNPUBLISHED, LICENSED SOFTWARE.
+ *   \timer_routine.c
  *
- * CONFIDENTIAL AND PROPRIETARY INFORMATION
- * WHICH IS THE PROPERTY OF your company.
+ *   Source file for ISR routine
  *
- * ========================================
+ *   \Authors: Oswaldo Parra, Chiara Maninetti
+ *   \Date: 25/04/2021
+ * ===========================
 */
 #include "timer_routine.h"
 #include "adc.h"
 #include "project.h"
 #define I2C_BUFFER_SIZE 7
 
-extern uint8_t tick;
 extern uint8_t sample;
 extern uint8_t data;
 extern uint8_t done;
 extern uint8_t samples_num;
+
+/**
+ * @brief function to deal with ISR operations.
+ * this ISR happens <1000/ControlRegister2> times a second, everytime has to trigger a sample event if status is not 00 and once every <number of samples to be used> samples has to update the values in the slave memory
+ */
 CY_ISR(CustomTimerISR){
-    // this ISR happens 250 times a second, everytime has to sample both sensors and once every 5 samples has to trigger a message transmission
-    timer_ReadStatusRegister();
-    tick++;
-    //if(!(tick%(ControlRegister2/samples_num)) && tick!=(samples_num))
-        sample=1;
-    //else
-    //    ;
-    if (data==(samples_num))
+    timer_ReadStatusRegister();         //read and clear the counter                          
+    sample=1;
+    if (data==(samples_num))            //if we have enough samples we rise the done flag which is used in the loop routine
         done=1;
     else
         ;

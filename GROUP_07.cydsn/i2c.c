@@ -1,57 +1,79 @@
 /* ========================================
  *
- * Copyright YOUR COMPANY, THE YEAR
- * All Rights Reserved
- * UNPUBLISHED, LICENSED SOFTWARE.
+ *   \i2c.c
  *
- * CONFIDENTIAL AND PROPRIETARY INFORMATION
- * WHICH IS THE PROPERTY OF your company.
+ *   Source file for I2C slave setting 
  *
+ *   \Authors: Oswaldo Parra, Chiara Maninetti
+ *   \Date: 25/04/2021
  * ========================================
 */
 #include "i2c.h"
 #include "defines.h"
 
-extern uint32_t accumulator_tmp; //accumulatori delle letture per fare la media 
+extern uint32_t accumulator_tmp;  
 extern uint32_t accumulator_ldr;
-extern uint16_t tmp;  //valori da trasmettere
+extern uint16_t tmp;  
 extern uint16_t ldr;
-extern uint8_t buffer_slave[I2C_BUFFER_SIZE];  //buffer di memoria dello slave
+extern uint8_t buffer_slave[I2C_BUFFER_SIZE];  
 extern uint8_t samples_num;
-extern uint8_t tick; //counter del timer
+extern uint8_t tick;
 extern uint8_t ControlRegister1;
 extern uint8_t ControlRegister2;
 extern uint8_t sample;
 extern uint8_t done;
 extern uint8_t data;
 
-void set_slave(volatile uint8_t * buffer){
-    //qui settiamo i valori del readme per il buffer dello slave        
-    buffer[0]=0; //00 bits riservati ,0101 5 samples da mediare, 00 inizialmente lo status è "devide stopped"
-    buffer[1]=0; //time period in ms, transmission frequency is 1/(time period*samples da mediare)
-    buffer[2]=0xbc; //valore del WHO AM I
-    buffer[3]=0;// bytes da riempire con i dati -start
-    buffer[4]=0;
-    buffer[5]=0;
-    buffer[6]=0;// bytes da riempire con i dati -stop
-    EZI2C_SetBuffer1(I2C_BUFFER_SIZE, I2C_BUFFER_SIZE-5, buffer_slave); //diciamo allo slave qual è il suo buffer di memoria
+
+
+/**
+ * @brief function to allocate the slave memory  and set default values in it.
+ */
+void set_slave(uint8_t * buffer){
+    buffer[CONTROL_REGISTER_1]=0;                                       //00 reserved bits  ,0000 samples to be used each cycle, 00 device status 
+    buffer[CONTROL_REGISTER_2]=0;                                       //ISR period (in ms)
+    buffer[WHO_AM_I]=0xbc;                                              //WHO AM I value is set to dafault (0xBC)
+    buffer[TEMP_MSB]=0;                                                 // bytes where the data has to be placed-start
+    buffer[TEMP_LSB]=0;
+    buffer[LDR_MSB]=0;
+    buffer[LDR_LSB]=0;                                                  // bytes where the data has to be placed -stop
+    EZI2C_Start();                                                      //we initizalize the slave
+    EZI2C_SetBuffer1(I2C_BUFFER_SIZE, RW_BUFFER_SIZE, buffer);          //and tell it where its buffer is, how much memory it has and which locations can be written by the master 
 }
 
+
+
+/**
+ * @brief function to set parameter from BCP
+ * this functions set new parameters when received from the master AND avoid bugs when ControlRegister starts with default value (0), if we write 0 into the timer compare register, some anomaly could happen.
+ */
 void set_parameters(void){
-    while (!buffer_slave[0] || !buffer_slave[1])
-        ;
-    
-    samples_num=((ControlRegister1>>2)&0xf);
-    timer_WritePeriod(ControlRegister2);
-    tick=0;
+    while (!buffer_slave[0] || !buffer_slave[1])   ;                    //we have to wait until BOTH the control registers are different from 0
+    samples_num=((ControlRegister1>>2)&0xf);                            //we read from the slave memory the parameters setted
+    timer_WritePeriod(ControlRegister2);                                //we set the period for the ISR                                                             
+    accumulator_tmp=0;                                                  //we initialize all the variables used in the sampling and average routine -start
     accumulator_ldr=0;
-    accumulator_tmp=0;
     sample=0;
     done=0;
     data=0;
     tmp=0;
-    ldr=0;
-    ControlRegister1=buffer_slave[0];
-    ControlRegister2=buffer_slave[1];
+    ldr=0;                                                              //we initialize all the variables used in the sampling and average routine -stop
+    ControlRegister1=buffer_slave[0];                                   //we update our local variables to not do this routine again until some parameters change
+    ControlRegister2=buffer_slave[1];                                   //we update our local variables to not do this routine again until some parameters change
+}
+
+
+
+
+
+/**
+ * @brief function to write the data in side the dedicated portion of memory
+ */
+void buffer_placement(void){
+    buffer_slave[TEMP_MSB]=tmp>>8;
+    buffer_slave[TEMP_LSB]=tmp&0xFF;
+    buffer_slave[LDR_MSB]=ldr>>8;
+    buffer_slave[LDR_LSB]=ldr&0xFF;
 }
 /* [] END OF FILE */
+

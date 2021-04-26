@@ -60,9 +60,9 @@ void set_parameters(void){
     ldr=0;                                                              //we initialize all the variables used in the sampling and average routine -stop
     ControlRegister1=buffer_slave[0];                                   //we update our local variables to not do this routine again until some parameters change
     ControlRegister2=buffer_slave[1];                                   //we update our local variables to not do this routine again until some parameters change
-    if (ControlRegister1&0b10 && ControlRegister1&0b01)                     //if the status is 11 the led is ON
+    if (ControlRegister1&0b10 && ControlRegister1&0b01)                 //if the status is 11 the led is ON
                 LED_Pin_Write(ON);
-            else                                                                    //otherwise is OFF
+            else                                                        //otherwise is OFF
                 LED_Pin_Write(OFF);
 }
 

@@ -41,10 +41,7 @@ int main(void){
     {
         if(buffer_slave[1]!=ControlRegister2 || buffer_slave[0]!=ControlRegister1){ //if at least one of the two control registers are different from the settings we are following, we recall set parameters and start again
             set_parameters();
-            if (ControlRegister1&0b10 && ControlRegister1&0b01)                     //if the status is 11 the led is ON
-                LED_Pin_Write(ON);
-            else                                                                    //otherwise is OFF
-                LED_Pin_Write(OFF);
+            
         }
         else{
             if(sample){                                                             //if a sample has to be taken, do it 

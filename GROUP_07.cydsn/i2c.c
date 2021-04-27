@@ -11,17 +11,30 @@
 #include "i2c.h"
 #include "defines.h"
 
+
+
+
+// keeps track locally of the status of our device, useful in sensor_sampling
+static uint8_t status;   
+
+// variables to sum the samples to average
 extern uint32_t accumulator_tmp;  
 extern uint32_t accumulator_ldr;
+// variables for the averaged values
 extern uint16_t tmp;  
 extern uint16_t ldr;
+// buffer of the slave
 extern uint8_t buffer_slave[I2C_BUFFER_SIZE];  
+// number of samples to average
 extern uint8_t samples_num;
-extern uint8_t tick;
+// Variables to keep track of the two control registers
 extern uint8_t ControlRegister1;
 extern uint8_t ControlRegister2;
+// flag used to signal that sampling needs to be performed
 extern uint8_t sample;
+// flag used to sample average and put the data in the slave buffer
 extern uint8_t done;
+// variable to keep track of how many values have already been sampled
 extern uint8_t data;
 
 
@@ -30,15 +43,15 @@ extern uint8_t data;
  * @brief function to allocate the slave memory  and set default values in it.
  */
 void set_slave(uint8_t * buffer){
-    buffer[CONTROL_REGISTER_1]=0;                                       //00 reserved bits  ,0000 samples to be used each cycle, 00 device status 
-    buffer[CONTROL_REGISTER_2]=0;                                       //ISR period (in ms)
-    buffer[WHO_AM_I]=0xbc;                                              //WHO AM I value is set to dafault (0xBC)
+    buffer[CONTROL_REGISTER_1]=0;                                       // 00 reserved bits  ,0000 samples to be used each cycle, 00 device status 
+    buffer[CONTROL_REGISTER_2]=0;                                       // ISR period (in ms)
+    buffer[WHO_AM_I]=0xbc;                                              // WHO AM I value is set to dafault (0xBC)
     buffer[TEMP_MSB]=0;                                                 // bytes where the data has to be placed-start
     buffer[TEMP_LSB]=0;
     buffer[LDR_MSB]=0;
     buffer[LDR_LSB]=0;                                                  // bytes where the data has to be placed -stop
-    EZI2C_Start();                                                      //we initizalize the slave
-    EZI2C_SetBuffer1(I2C_BUFFER_SIZE, RW_BUFFER_SIZE, buffer);          //and tell it where its buffer is, how much memory it has and which locations can be written by the master 
+    EZI2C_Start();                                                      // we initizalize the slave
+    EZI2C_SetBuffer1(I2C_BUFFER_SIZE, RW_BUFFER_SIZE, buffer);          // and tell it where its buffer is, how much memory it has and which locations can be written by the master 
 }
 
 
@@ -74,10 +87,10 @@ void set_parameters(void){
  * @brief function to write the data in side the dedicated portion of memory
  */
 void buffer_placement(void){
-    buffer_slave[TEMP_MSB]=tmp>>8;
-    buffer_slave[TEMP_LSB]=tmp&0xFF;
-    buffer_slave[LDR_MSB]=ldr>>8;
-    buffer_slave[LDR_LSB]=ldr&0xFF;
+    buffer_slave[TEMP_MSB]=tmp>>8;          // most significant byte of the temperature reading
+    buffer_slave[TEMP_LSB]=tmp&0xFF;        // least significant byte of the temperature reading
+    buffer_slave[LDR_MSB]=ldr>>8;           // most significant byte of the light reading
+    buffer_slave[LDR_LSB]=ldr&0xFF;         // least significant byte of the light reading
 }
 /* [] END OF FILE */
 

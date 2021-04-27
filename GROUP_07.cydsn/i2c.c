@@ -1,106 +1,96 @@
 /* ========================================
  *
- * Copyright YOUR COMPANY, THE YEAR
- * All Rights Reserved
- * UNPUBLISHED, LICENSED SOFTWARE.
+ *   \i2c.c
  *
- * CONFIDENTIAL AND PROPRIETARY INFORMATION
- * WHICH IS THE PROPERTY OF your company.
+ *   Source file for I2C slave setting 
  *
+ *   \Authors: Oswaldo Parra, Chiara Maninetti
+ *   \Date: 25/04/2021
  * ========================================
 */
 #include "i2c.h"
+#include "defines.h"
 
-extern uint8_t buffer_slave[I2C_BUFFER_SIZE];
-extern uint8_t samples;
-extern uint8_t timer_period;
 
+
+
+// keeps track locally of the status of our device, useful in sensor_sampling
+static uint8_t status;   
+
+// variables to sum the samples to average
+extern uint32_t accumulator_tmp;  
+extern uint32_t accumulator_ldr;
+// variables for the averaged values
+extern uint16_t tmp;  
+extern uint16_t ldr;
+// buffer of the slave
+extern uint8_t buffer_slave[I2C_BUFFER_SIZE];  
+// number of samples to average
+extern uint8_t samples_num;
+// Variables to keep track of the two control registers
 extern uint8_t ControlRegister1;
 extern uint8_t ControlRegister2;
+// flag used to signal that sampling needs to be performed
+extern uint8_t sample;
+// flag used to sample average and put the data in the slave buffer
+extern uint8_t done;
+// variable to keep track of how many values have already been sampled
+extern uint8_t data;
 
 
-void set_slave(volatile uint8_t * buffer){
-    
-    // set the slave buffer values
-    
-    // CONTROL REGISTER 1
-    // bytes 0-1: 00, device stopped
-    // bytes 2-5: 0101, number of samples to average (5)
-    // bytes 7-8: 00, reserved bits
-    buffer[0]=0b00010100;
-    
-    // CONTROL REGISTER 2 (timer period)
-    buffer[1]=0b101;
-    
-    //  WHO AM I value
-    buffer[2]=0xBC;
-    
-    // Buffer bytes reserved for data
-    buffer[3]=0;
-    buffer[4]=0;
-    buffer[5]=0;
-    buffer[6]=0;
-    buffer[7]=0;
-    
-    // set the slave's memory buffer
-    
-    EZI2C_SetBuffer1(I2C_BUFFER_SIZE, I2C_BUFFER_SIZE-5, buffer_slave);
+
+/**
+ * @brief function to allocate the slave memory  and set default values in it.
+ */
+void set_slave(uint8_t * buffer){
+    buffer[CONTROL_REGISTER_1]=0;                                       // 00 reserved bits  ,0000 samples to be used each cycle, 00 device status 
+    buffer[CONTROL_REGISTER_2]=0;                                       // ISR period (in ms)
+    buffer[WHO_AM_I]=0xbc;                                              // WHO AM I value is set to dafault (0xBC)
+    buffer[TEMP_MSB]=0;                                                 // bytes where the data has to be placed-start
+    buffer[TEMP_LSB]=0;
+    buffer[LDR_MSB]=0;
+    buffer[LDR_LSB]=0;                                                  // bytes where the data has to be placed -stop
+    EZI2C_Start();                                                      // we initizalize the slave
+    EZI2C_SetBuffer1(I2C_BUFFER_SIZE, RW_BUFFER_SIZE, buffer);          // and tell it where its buffer is, how much memory it has and which locations can be written by the master 
 }
 
-uint16_t trim_values(volatile uint16_t value)
-{
-    if (value<0) value=0;                       // trim values lower than 0
-    if (value>=65535) value=65535;              // trim values greater than 2^16
-    value=ADC_DelSig_CountsTo_mVolts(value);    // convert value to millivolts
-    return value;
+
+
+/**
+ * @brief function to set parameter from BCP
+ * this functions set new parameters when received from the master AND avoid bugs when ControlRegister starts with default value (0), if we write 0 into the timer compare register, some anomaly could happen.
+ */
+void set_parameters(void){
+    while (!buffer_slave[0] || !buffer_slave[1])   ;                    //we have to wait until BOTH the control registers are different from 0
+    samples_num=((ControlRegister1>>2)&0xf);                            //we read from the slave memory the parameters setted
+    timer_WritePeriod(ControlRegister2);                                //we set the period for the ISR                                                             
+    accumulator_tmp=0;                                                  //we initialize all the variables used in the sampling and average routine -start
+    accumulator_ldr=0;
+    sample=0;
+    done=0;
+    data=0;
+    tmp=0;
+    ldr=0;                                                              //we initialize all the variables used in the sampling and average routine -stop
+    ControlRegister1=buffer_slave[0];                                   //we update our local variables to not do this routine again until some parameters change
+    ControlRegister2=buffer_slave[1];                                   //we update our local variables to not do this routine again until some parameters change
+    if (ControlRegister1&0b10 && ControlRegister1&0b01)                 //if the status is 11 the led is ON
+                LED_Pin_Write(ON);
+            else                                                        //otherwise is OFF
+                LED_Pin_Write(OFF);
+}
+
+
+
+
+
+/**
+ * @brief function to write the data in side the dedicated portion of memory
+ */
+void buffer_placement(void){
+    buffer_slave[TEMP_MSB]=tmp>>8;          // most significant byte of the temperature reading
+    buffer_slave[TEMP_LSB]=tmp&0xFF;        // least significant byte of the temperature reading
+    buffer_slave[LDR_MSB]=ldr>>8;           // most significant byte of the light reading
+    buffer_slave[LDR_LSB]=ldr&0xFF;         // least significant byte of the light reading
 }
 /* [] END OF FILE */
 
-uint8_t set_time_period(uint8_t buffer_slave[])
-{
-    uint8_t timer_period=buffer_slave[1];
-    if (timer_period<1) 
-        timer_period=1;
-    if(timer_period>(1/TRANSMISSION_RATE*1000)/MAX_NUMBER_OF_SAMPLES)
-        timer_period=(1/TRANSMISSION_RATE*1000)/MAX_NUMBER_OF_SAMPLES;
-    samples=(1/TRANSMISSION_RATE*1000)/timer_period;
-    return timer_period;
-}
-
-uint8_t set_samples(uint8_t buffer_slave[])
-{
-    uint8_t samples=(buffer_slave[0]>>2)-((buffer_slave[0]>>6)<<4);         // extract the bits corresponding to the number of samples from the register 1
-    if (samples<1)
-        samples=1;
-    if (samples>MAX_NUMBER_OF_SAMPLES)
-        samples=MAX_NUMBER_OF_SAMPLES;
-    timer_period=1/(samples*TRANSMISSION_RATE)*1000;
-    return samples;
-}
-
-void set_parameters(uint8_t *ControlRegister1, uint8_t *ControlRegister2, uint8_t buffer_slave[], uint8_t*samples, uint8_t*timer_period, uint16_t*tmp, uint16_t*ldr, uint8_t*count)
-{
-    *tmp=0;
-    *ldr=0;
-    *count=0;
-    
-    if (buffer_slave[0]==*ControlRegister1 && buffer_slave[1]!=*ControlRegister2)
-    {
-        *timer_period=set_time_period(buffer_slave);
-    }
-    if (buffer_slave[0]!=*ControlRegister1 && buffer_slave[1]==*ControlRegister2)
-    {
-        *samples=set_samples(buffer_slave);
-    }
-    if (buffer_slave[0]!=*ControlRegister1 && buffer_slave[1]!=*ControlRegister2)
-    {
-        *timer_period=set_time_period(buffer_slave);
-        *samples=set_samples(buffer_slave);
-    }
-        *ControlRegister1=buffer_slave[0];
-        *ControlRegister2=buffer_slave[1];
-        if ((buffer_slave[0]>>6)==3)
-                LED_Pin_Write(1);
-            else 
-                LED_Pin_Write(0); 
-}
